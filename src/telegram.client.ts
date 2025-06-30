@@ -34,7 +34,7 @@ export class BotUpdate {
         command: 'permanent',
         description: 'Зарегистрировать постоянный билет',
       },
-      { command: 'list_campaigns', description: 'Список кампаний' },
+      { command: 'next_session', description: 'Следующая сессия' },
       { command: 'create_session', description: '[ДМ] Создать сессию' },
     ]);
   }
@@ -48,7 +48,7 @@ export class BotUpdate {
           { text: '/cancel' },
           { text: '/my_tickets' },
           { text: '/tickets' },
-          { text: '/list_sessions' },
+          { text: '/next_session' },
         ],
       ],
     },
@@ -129,23 +129,19 @@ export class BotUpdate {
       this.userService.checkRole(user, ['admin', 'dungeonMaster']);
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
-      if (!args || args.length < 3) {
-        await ctx.reply(
-          'Пример: /create_campaign <name> <maxTickets> <scheduleOrder>',
-        );
+      if (!args || args.length < 2) {
+        await ctx.reply('Пример: /create_campaign <name> <maxTickets>');
         return;
       }
-      const [name, maxTicketsStr, scheduleOrderStr] = args;
+      const [name, maxTicketsStr] = args;
       const maxTickets = parseInt(maxTicketsStr, 10);
-      const scheduleOrder = parseInt(scheduleOrderStr, 10);
-      if (isNaN(maxTickets) || isNaN(scheduleOrder)) {
-        await ctx.reply('maxTickets и scheduleOrder должны быть числами.');
+      if (isNaN(maxTickets)) {
+        await ctx.reply('maxTickets должен быть числом.');
         return;
       }
       const campaign = await this.campaignService.createCampaign(
         name,
         maxTickets,
-        scheduleOrder,
       );
       await ctx.reply(
         `Кампания создана: ${campaign.name} (ID: ${campaign.id})`,
@@ -239,40 +235,21 @@ export class BotUpdate {
     return assigned ? assigned.id : null;
   }
 
-  @Command('list_sessions')
-  async listSessions(@Ctx() ctx: Context) {
+  @Command('next_session')
+  async nextSession(@Ctx() ctx: Context) {
     await this.handle(ctx, async (ctx) => {
-      const text = getMessageText(ctx);
-      const args = text?.split(' ').slice(1);
-      if (!args || args.length < 1) {
-        await ctx.reply(
-          'Пример: /list_sessions <campaignId>',
-          this.defaultKeyboardOpts,
-        );
-        return;
-      }
-      const [campaignIdStr] = args;
-      const campaignId = parseInt(campaignIdStr, 10);
-      if (isNaN(campaignId)) {
-        await ctx.reply('campaignId must be a number.');
-        return;
-      }
-      const sessions = await this.campaignService.listSessionsForCampaign(
-        campaignId,
+      const session = await this.campaignService.getNextSession();
+      const availableTickets = await this.ticketService.countAvailableTickets(
+        session.id,
       );
-      if (sessions.length === 0) {
-        await ctx.reply('No sessions found for this campaign.');
-        return;
-      }
-      const list = sessions
-        .map(
-          (s) =>
-            `${s.id}: ${s.dateTime.toLocaleString('ru-RU', {
-              timeZone: 'Europe/Moscow',
-            })}`,
-        )
-        .join('\n');
-      await ctx.reply(`Sessions for campaign ${campaignId}:\n${list}`);
+      await ctx.reply(
+        `🎲 Следующая сессия: ${
+          session.campaign.name
+        } в ${session.dateTime.toLocaleString('ru-RU', {
+          timeZone: 'Europe/Moscow',
+        })} (доступно билетов: ${availableTickets})`,
+        this.defaultKeyboardOpts,
+      );
     });
   }
 
@@ -282,21 +259,7 @@ export class BotUpdate {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
       // Find the next available session for the user's campaign, or soonest session overall
-      let session = null;
-      const allCampaigns = await this.campaignService.listCampaigns();
-      for (const c of allCampaigns) {
-        const s = await this.campaignService.getNextSessionForCampaign(c.id);
-        if (s && (!session || s.dateTime < session.dateTime)) {
-          session = s;
-        }
-      }
-      if (!session) {
-        await ctx.reply(
-          '🔒 Нет доступных сессий для бронирования.',
-          this.defaultKeyboardOpts,
-        );
-        return;
-      }
+      const session = await this.campaignService.getNextSession();
       // Determine best drop type
       let dropType: DropType = DropType.NON_PRIORITY;
       if (
@@ -340,21 +303,7 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       await this.userService.findByTelegramId(telegramId);
-      let session = null;
-      const allCampaigns = await this.campaignService.listCampaigns();
-      for (const c of allCampaigns) {
-        const s = await this.campaignService.getNextSessionForCampaign(c.id);
-        if (s && (!session || s.dateTime < session.dateTime)) {
-          session = s;
-        }
-      }
-      if (!session) {
-        await ctx.reply(
-          '🔒 Нет доступных сессий для просмотра билетов.',
-          this.defaultKeyboardOpts,
-        );
-        return;
-      }
+      const session = await this.campaignService.getNextSession();
       const tickets = await this.ticketService.listTicketsForSession(
         session.id,
       );
@@ -402,19 +351,21 @@ export class BotUpdate {
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
       if (!args || args.length < 1) {
-        await ctx.reply(
-          '🔒 Пример: /permanent <campaignId>',
-          this.defaultKeyboardOpts,
-        );
+        await ctx.reply('🔒 Пример: /permanent <campaignId>', {
+          reply_markup: {
+            keyboard: [[{ text: '/list_campaigns' }]],
+          },
+        });
         return;
       }
       const [campaignIdStr] = args;
       const campaignId = parseInt(campaignIdStr, 10);
       if (isNaN(campaignId)) {
-        await ctx.reply(
-          '🔒 campaignId должен быть числом.',
-          this.defaultKeyboardOpts,
-        );
+        await ctx.reply('🔒 campaignId должен быть числом.', {
+          reply_markup: {
+            keyboard: [[{ text: '/list_campaigns' }]],
+          },
+        });
         return;
       }
       await this.ticketService.createPermanentTicket(user.id, campaignId);
@@ -430,21 +381,7 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      const allCampaigns = await this.campaignService.listCampaigns();
-      let session = null;
-      for (const c of allCampaigns) {
-        const s = await this.campaignService.getNextSessionForCampaign(c.id);
-        if (s && (!session || s.dateTime < session.dateTime)) {
-          session = s;
-        }
-      }
-      if (!session) {
-        await ctx.reply(
-          '🔒 Нет доступных сессий для отмены.',
-          this.defaultKeyboardOpts,
-        );
-        return;
-      }
+      const session = await this.campaignService.getNextSession();
       const ticket = user.tickets.find((t) => t.sessionId === session.id);
       if (!ticket) {
         await ctx.reply(

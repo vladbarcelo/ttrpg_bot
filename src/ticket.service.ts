@@ -143,4 +143,18 @@ export class TicketService {
       include: { user: true },
     });
   }
+
+  async countAvailableTickets(sessionId: number) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: { campaign: true },
+    });
+    const confirmedCount = await this.prisma.ticket.count({
+      where: { sessionId, status: TicketStatus.CONFIRMED },
+    });
+    const bookedCount = await this.prisma.ticket.count({
+      where: { sessionId, status: TicketStatus.BOOKED },
+    });
+    return session.campaign.maxTickets - confirmedCount - bookedCount;
+  }
 }

@@ -1,16 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CampaignService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createCampaign(
-    name: string,
-    maxTickets: number,
-    scheduleOrder: number,
-  ) {
+  async createCampaign(name: string, maxTickets: number) {
+    const scheduleOrder = (await this.prisma.campaign.count()) + 1;
     return this.prisma.campaign.create({
       data: { name, maxTickets, scheduleOrder },
     });
@@ -18,7 +14,7 @@ export class CampaignService {
 
   async listCampaigns() {
     return this.prisma.campaign.findMany({
-      orderBy: { scheduleOrder: 'asc' },
+      orderBy: { scheduleOrder: 'desc' },
       select: {
         id: true,
         name: true,
@@ -60,5 +56,21 @@ export class CampaignService {
       },
       orderBy: { dateTime: 'asc' },
     });
+  }
+
+  async getNextSession() {
+    let session = null;
+    const allCampaigns = await this.listCampaigns();
+    for (const c of allCampaigns) {
+      const s = await this.getNextSessionForCampaign(c.id);
+      if (s && (!session || s.dateTime < session.dateTime)) {
+        session = s;
+      }
+    }
+
+    if (!session) {
+      throw new NotFoundException('🔒 Запланированных сессий не найдено');
+    }
+    return session;
   }
 }
