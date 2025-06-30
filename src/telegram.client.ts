@@ -61,18 +61,22 @@ export class BotUpdate {
       ctx,
     )}`;
     try {
-      this.logger.log(logMsg);
       await fn(ctx);
+      this.logger.log(logMsg);
     } catch (e) {
       let msg = e.message || 'Неизвестная ошибка';
+      let isError = false;
       if (
         e?.getStatus &&
         typeof e.getStatus === 'function' &&
         e?.getStatus() > 500
-      )
+      ) {
         msg = '❌ Ошибка: ' + msg;
+        isError = true;
+      }
       await ctx.reply(msg, this.defaultKeyboardOpts);
-      this.logger.error(logMsg, e);
+      if (isError) this.logger.error(`${logMsg}: ${msg}`, e);
+      else this.logger.log(`${logMsg}: ${msg}`, e);
     }
   }
 
