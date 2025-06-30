@@ -23,13 +23,17 @@ export class TicketService {
       where: { sessionId, userId },
     });
     if (existing) throw new ForbiddenException('Билет уже забронирован');
+    if (session.campaign.dungeonMasterId === userId)
+      throw new ForbiddenException(
+        '🔒 Вам не нужно бронировать билеты для сессии, которую вы ведёте',
+      );
     // check if drop is valid
     const now = DateTime.now().setZone('Europe/Moscow');
     const sessionTime = DateTime.fromJSDate(session.dateTime).setZone(
       'Europe/Moscow',
     );
     const hoursToSession = sessionTime.diff(now, 'hours').hours;
-    if (hoursToSession > 24 && drop === DropType.NON_PRIORITY) {
+    if (hoursToSession > 22.1 && drop === DropType.NON_PRIORITY) {
       throw new ForbiddenException('Слишком рано для бронирования');
     }
     // Check if max tickets reached
