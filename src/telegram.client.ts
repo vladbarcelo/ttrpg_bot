@@ -3,7 +3,6 @@ import { Context, Telegraf } from 'telegraf';
 import { UserService } from './user.service';
 import { CampaignService } from './campaign.service';
 import { TicketService } from './ticket.service';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DropType } from '@prisma/client';
 import { DateTime } from 'luxon';
 
@@ -22,11 +21,13 @@ export class BotUpdate {
   ) {
     this.bot.telegram.setMyCommands([
       { command: 'start', description: 'Начать' },
+      { command: 'list_campaigns', description: 'Список кампаний' },
       { command: 'create_session', description: 'Создать сессию' },
       { command: 'book', description: 'Забронировать билет' },
       { command: 'confirm', description: 'Подтвердить билет' },
       { command: 'cancel', description: 'Отменить билет' },
       { command: 'my_tickets', description: 'Мои билеты' },
+      { command: 'tickets', description: 'Общий список купленных билетов' },
       {
         command: 'permanent',
         description: 'Зарегистрировать постоянный билет',
@@ -133,9 +134,9 @@ export class BotUpdate {
         return;
       }
       const list = campaigns
-        .map((c) => `${c.id}: ${c.name} (билетов: ${c.maxTickets})`)
+        .map((c) => `${c.id}: ${c.name} (макс. билетов: ${c.maxTickets})`)
         .join('\n');
-      await ctx.reply(`Кампании:\n${list}`);
+      await ctx.reply(`🎲 Кампании:\n${list}`);
     });
   }
 
@@ -247,10 +248,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       // Find the next available session for the user's campaign, or soonest session overall
       let session = null;
       const allCampaigns = await this.campaignService.listCampaigns();
@@ -290,10 +287,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       const tickets = await this.ticketService.listUserTickets(user.id);
       if (tickets.length === 0) {
         await ctx.reply('🔒 У вас нет билетов.');
@@ -305,15 +298,40 @@ export class BotUpdate {
     });
   }
 
+  async tickets(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const telegramId = String(ctx.from?.id);
+      await this.userService.findByTelegramId(telegramId);
+      let session = null;
+      const allCampaigns = await this.campaignService.listCampaigns();
+      for (const c of allCampaigns) {
+        const s = await this.campaignService.getNextSessionForCampaign(c.id);
+        if (s && (!session || s.dateTime < session.dateTime)) {
+          session = s;
+        }
+      }
+      if (!session) {
+        await ctx.reply('🔒 Нет доступных сессий для просмотра билетов.');
+        return;
+      }
+      const tickets = await this.ticketService.listTicketsForSession(
+        session.id,
+      );
+      const list = tickets.map(
+        (t) =>
+          `ID: ${t.id}, Пользователь: ${t.user.name}, Статус: ${t.status}, Тип бронирования: ${t.drop}`,
+      );
+      await ctx.reply(
+        `🎫 Билеты для сессии ${session.campaign.name}:\n${list.join('\n')}`,
+      );
+    });
+  }
+
   @Command('my_tickets')
   async myTickets(@Ctx() ctx: Context) {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       const tickets = await this.ticketService.listUserTickets(user.id);
       if (tickets.length === 0) {
         await ctx.reply('🔒 У вас нет билетов.');
@@ -338,10 +356,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       this.userService.checkRole(user, ['priority']);
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
@@ -365,10 +379,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       const allCampaigns = await this.campaignService.listCampaigns();
       let session = null;
       for (const c of allCampaigns) {
@@ -396,10 +406,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       this.userService.checkRole(user, ['admin']);
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
@@ -423,10 +429,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       this.userService.checkRole(user, ['admin']);
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
@@ -450,10 +452,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       this.userService.checkRole(user, ['admin']);
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
@@ -477,10 +475,6 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
-      if (!user) {
-        await ctx.reply('🔒 Вы должны зарегистрироваться.');
-        return;
-      }
       this.userService.checkRole(user, ['admin']);
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);

@@ -132,4 +132,11 @@ export class TicketService {
       where: { campaignId },
     });
   }
+
+  async listTicketsForSession(sessionId: number) {
+    return this.prisma.ticket.findMany({
+      where: { sessionId },
+      include: { user: true },
+    });
+  }
 }

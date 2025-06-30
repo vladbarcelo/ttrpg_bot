@@ -15,10 +15,15 @@ export class UserService {
   }
 
   async findByTelegramId(telegramId: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { telegramId },
       include: { permanentTickets: true, tickets: true },
     });
+    if (!user) {
+      throw new ForbiddenException('🔒 Вы должны зарегистрироваться.');
+    }
+
+    return user;
   }
 
   async setAdmin(telegramId: string, isAdmin: boolean) {
