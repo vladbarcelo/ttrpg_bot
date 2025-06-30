@@ -5,6 +5,7 @@ import { CampaignService } from './campaign.service';
 import { TicketService } from './ticket.service';
 import { DropType } from '@prisma/client';
 import { DateTime } from 'luxon';
+import { Logger } from '@nestjs/common';
 
 function getMessageText(ctx: Context): string | undefined {
   const msg = ctx.message as { text?: string } | undefined;
@@ -17,6 +18,7 @@ export class BotUpdate {
     private readonly userService: UserService,
     private readonly campaignService: CampaignService,
     private readonly ticketService: TicketService,
+    private readonly logger: Logger,
     @InjectBot() private bot: Telegraf,
   ) {
     this.bot.telegram.setMyCommands([
@@ -39,10 +41,13 @@ export class BotUpdate {
   }
 
   private async handle(ctx: Context, fn: (ctx: Context) => Promise<void>) {
+    const logMsg = `[${ctx.from?.id}] ${getMessageText(ctx)}`;
     try {
+      this.logger.log(logMsg);
       await fn(ctx);
     } catch (e) {
       await ctx.reply('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'));
+      this.logger.error(logMsg, e);
     }
   }
 
