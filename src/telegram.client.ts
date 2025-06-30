@@ -28,7 +28,7 @@ export class BotUpdate {
       { command: 'my_tickets', description: 'Мои билеты' },
       {
         command: 'tickets',
-        description: 'Общий список билетов на предстоящую сессию',
+        description: 'Все подтвержденные билеты',
       },
       {
         command: 'permanent',
@@ -62,7 +62,15 @@ export class BotUpdate {
       await this.userService.registerUser(telegramId, name);
       await ctx.reply(`👋 Добро пожаловать, ${name}! Вы зарегистрированы.`, {
         reply_markup: {
-          keyboard: [[{ text: '/book' }]],
+          keyboard: [
+            [
+              { text: '/book' },
+              { text: '/confirm' },
+              { text: '/cancel' },
+              { text: '/my_tickets' },
+              { text: '/tickets' },
+            ],
+          ],
         },
       });
     });
@@ -309,6 +317,7 @@ export class BotUpdate {
     });
   }
 
+  @Command('tickets')
   async tickets(@Ctx() ctx: Context) {
     await this.handle(ctx, async (ctx) => {
       const telegramId = String(ctx.from?.id);
