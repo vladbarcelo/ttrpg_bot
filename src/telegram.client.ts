@@ -75,8 +75,8 @@ export class BotUpdate {
         isError = true;
       }
       await ctx.reply(msg, this.defaultKeyboardOpts);
-      if (isError) this.logger.error(`${logMsg}: ${msg}`, e);
-      else this.logger.log(`${logMsg}: ${msg}`, e);
+      if (isError) this.logger.error(`${logMsg}: ${msg}`);
+      else this.logger.log(`${logMsg}: ${msg}`);
     }
   }
 
