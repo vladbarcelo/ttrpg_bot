@@ -40,6 +40,9 @@ model Session {
   campaignId  Int
   dateTime    DateTime
   tickets     Ticket[]
+  priorityDropNotified      Boolean @default(false)
+  confirmationRequested     Boolean @default(false)
+  nonPriorityDropNotified   Boolean @default(false)
 }
 
 model Ticket {

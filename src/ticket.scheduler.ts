@@ -34,7 +34,11 @@ export class TicketScheduler {
       const hToSession = msToSession / (60 * 60 * 1000);
 
       // 48h before: priority drop
-      if (hToSession > 47.9 && hToSession < 48.1) {
+      if (
+        hToSession > 47.9 &&
+        hToSession < 48.1 &&
+        !session.priorityDropNotified
+      ) {
         const priorityUsers = await this.prisma.user.findMany({
           where: { isPriority: true },
         });
@@ -49,10 +53,18 @@ export class TicketScheduler {
             },
           );
         }
+        await this.prisma.session.update({
+          where: { id: session.id },
+          data: { priorityDropNotified: true },
+        });
       }
 
       // 25h before: ask for confirmation
-      if (hToSession > 24.9 && hToSession < 25.1) {
+      if (
+        hToSession > 24.9 &&
+        hToSession < 25.1 &&
+        !session.confirmationRequested
+      ) {
         const tickets = await this.prisma.ticket.findMany({
           where: {
             sessionId: session.id,
@@ -75,10 +87,18 @@ export class TicketScheduler {
             );
           }
         }
+        await this.prisma.session.update({
+          where: { id: session.id },
+          data: { confirmationRequested: true },
+        });
       }
 
       // 22h before: non-priority drop and unbook unconfirmed tickets
-      if (hToSession > 21.9 && hToSession < 22.1) {
+      if (
+        hToSession > 21.9 &&
+        hToSession < 22.1 &&
+        !session.nonPriorityDropNotified
+      ) {
         // Unbook unconfirmed tickets
         const tickets = await this.prisma.ticket.findMany({
           where: { sessionId: session.id, status: 'BOOKED' },
@@ -111,6 +131,10 @@ export class TicketScheduler {
             },
           );
         }
+        await this.prisma.session.update({
+          where: { id: session.id },
+          data: { nonPriorityDropNotified: true },
+        });
       }
     }
   }
