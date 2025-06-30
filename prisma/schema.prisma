@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType      = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  telegramId    String   @unique
+  name          String
+  isAdmin       Boolean  @default(false)
+  isDungeonMaster Boolean @default(false)
+  isPriority    Boolean  @default(false)
+  tickets       Ticket[]
+  permanentTickets PermanentTicket[]
+  campaignsAsDungeonMaster Campaign[] @relation("CampaignDungeonMaster")
+}
+
+model Campaign {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  maxTickets    Int
+  scheduleOrder Int
+  dungeonMasterId Int?
+  dungeonMaster   User? @relation("CampaignDungeonMaster", fields: [dungeonMasterId], references: [id])
+  sessions      Session[]
+  permanentTickets PermanentTicket[]
+}
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  campaignId  Int
+  dateTime    DateTime
+  tickets     Ticket[]
+}
+
+model Ticket {
+  id         Int      @id @default(autoincrement())
+  session    Session  @relation(fields: [sessionId], references: [id])
+  sessionId  Int
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  status     TicketStatus
+  drop       DropType
+  bookedAt   DateTime @default(now())
+  confirmedAt DateTime?
+}
+
+enum TicketStatus {
+  BOOKED
+  CONFIRMED
+}
+
+enum DropType {
+  PRIORITY
+  NON_PRIORITY
+  PERMANENT
+}
+
+model PermanentTicket {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaignId Int
+}
