@@ -18,7 +18,6 @@ export class BotUpdate {
     private readonly userService: UserService,
     private readonly campaignService: CampaignService,
     private readonly ticketService: TicketService,
-    private readonly logger: Logger,
     @InjectBot() private bot: Telegraf,
   ) {
     this.bot.telegram.setMyCommands([
@@ -39,6 +38,8 @@ export class BotUpdate {
       { command: 'create_session', description: '[ДМ] Создать сессию' },
     ]);
   }
+
+  private readonly logger = new Logger('TelegramClient', { timestamp: true });
 
   private async handle(ctx: Context, fn: (ctx: Context) => Promise<void>) {
     const logMsg = `[${ctx.from?.id}] ${getMessageText(ctx)}`;
