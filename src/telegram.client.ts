@@ -21,17 +21,20 @@ export class BotUpdate {
   ) {
     this.bot.telegram.setMyCommands([
       { command: 'start', description: 'Начать' },
-      { command: 'list_campaigns', description: 'Список кампаний' },
-      { command: 'create_session', description: 'Создать сессию' },
       { command: 'book', description: 'Забронировать билет' },
       { command: 'confirm', description: 'Подтвердить билет' },
       { command: 'cancel', description: 'Отменить билет' },
       { command: 'my_tickets', description: 'Мои билеты' },
-      { command: 'tickets', description: 'Общий список купленных билетов' },
+      {
+        command: 'tickets',
+        description: 'Общий список билетов на предстоящую сессию',
+      },
       {
         command: 'permanent',
         description: 'Зарегистрировать постоянный билет',
       },
+      { command: 'list_campaigns', description: 'Список кампаний' },
+      { command: 'create_session', description: '[ДМ] Создать сессию' },
     ]);
   }
 
