@@ -42,7 +42,9 @@ export class BotUpdate {
   private readonly logger = new Logger('TelegramClient', { timestamp: true });
 
   private async handle(ctx: Context, fn: (ctx: Context) => Promise<void>) {
-    const logMsg = `[${ctx.from?.id}] ${getMessageText(ctx)}`;
+    const logMsg = `[${ctx?.from?.username}, ${ctx?.from?.id}] ${getMessageText(
+      ctx,
+    )}`;
     try {
       this.logger.log(logMsg);
       await fn(ctx);
