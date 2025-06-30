@@ -49,7 +49,6 @@ export class BotUpdate {
           { text: '/my_tickets' },
           { text: '/tickets' },
           { text: '/list_sessions' },
-          { text: '/permanent' },
         ],
       ],
     },
