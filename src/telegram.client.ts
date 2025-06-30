@@ -39,6 +39,22 @@ export class BotUpdate {
     ]);
   }
 
+  private readonly defaultKeyboardOpts = {
+    reply_markup: {
+      keyboard: [
+        [
+          { text: '/book' },
+          { text: '/confirm' },
+          { text: '/cancel' },
+          { text: '/my_tickets' },
+          { text: '/tickets' },
+          { text: '/list_sessions' },
+          { text: '/permanent' },
+        ],
+      ],
+    },
+  };
+
   private readonly logger = new Logger('TelegramClient', { timestamp: true });
 
   private async handle(ctx: Context, fn: (ctx: Context) => Promise<void>) {
@@ -49,7 +65,10 @@ export class BotUpdate {
       this.logger.log(logMsg);
       await fn(ctx);
     } catch (e) {
-      await ctx.reply('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'));
+      await ctx.reply(
+        '❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'),
+        this.defaultKeyboardOpts,
+      );
       this.logger.error(logMsg, e);
     }
   }
@@ -60,19 +79,10 @@ export class BotUpdate {
       const telegramId = String(ctx.from?.id);
       const name = ctx.from?.first_name || 'Unknown';
       await this.userService.registerUser(telegramId, name);
-      await ctx.reply(`👋 Добро пожаловать, ${name}! Вы зарегистрированы.`, {
-        reply_markup: {
-          keyboard: [
-            [
-              { text: '/book' },
-              { text: '/confirm' },
-              { text: '/cancel' },
-              { text: '/my_tickets' },
-              { text: '/tickets' },
-            ],
-          ],
-        },
-      });
+      await ctx.reply(
+        `👋 Добро пожаловать, ${name}! Вы зарегистрированы.`,
+        this.defaultKeyboardOpts,
+      );
     });
   }
 
@@ -149,13 +159,13 @@ export class BotUpdate {
     await this.handle(ctx, async (ctx) => {
       const campaigns = await this.campaignService.listCampaigns();
       if (campaigns.length === 0) {
-        await ctx.reply('Кампаний не найдено.');
+        await ctx.reply('Кампаний не найдено.', this.defaultKeyboardOpts);
         return;
       }
       const list = campaigns
         .map((c) => `${c.id}: ${c.name} (макс. билетов: ${c.maxTickets})`)
         .join('\n');
-      await ctx.reply(`🎲 Кампании:\n${list}`);
+      await ctx.reply(`🎲 Кампании:\n${list}`, this.defaultKeyboardOpts);
     });
   }
 
@@ -168,7 +178,7 @@ export class BotUpdate {
       // Stub: get assigned campaign for DM
       const campaignId = await this.getAssignedCampaignIdForDM(user.id);
       if (!campaignId) {
-        await ctx.reply('🔒 Кампания не назначена.');
+        await ctx.reply('🔒 Кампания не назначена.', this.defaultKeyboardOpts);
         return;
       }
       // Calculate next Thursday 19:00 Moscow time
@@ -208,12 +218,14 @@ export class BotUpdate {
           `🎫 Ваш постоянный билет зарегистрирован на сессию ${
             campaign.name
           } в ${nextThursday.toFormat('yyyy-MM-dd HH:mm')} (Московское время)`,
+          this.defaultKeyboardOpts,
         );
       }
       await ctx.reply(
         `🎲 Сессия создана для кампании ${
           campaign.name
         } в ${nextThursday.toFormat('yyyy-MM-dd HH:mm')} (Московское время)`,
+        this.defaultKeyboardOpts,
       );
     });
   }
@@ -234,7 +246,10 @@ export class BotUpdate {
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
       if (!args || args.length < 1) {
-        await ctx.reply('Usage: /list_sessions <campaignId>');
+        await ctx.reply(
+          'Пример: /list_sessions <campaignId>',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       const [campaignIdStr] = args;
@@ -277,7 +292,10 @@ export class BotUpdate {
         }
       }
       if (!session) {
-        await ctx.reply('🔒 Нет доступных сессий для бронирования.');
+        await ctx.reply(
+          '🔒 Нет доступных сессий для бронирования.',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       // Determine best drop type
@@ -297,6 +315,7 @@ export class BotUpdate {
         `🎫 Билет забронирован для сессии ${
           session.campaign.name
         } (${sessionTime.toFormat('yyyy-MM-dd HH:mm')})`,
+        this.defaultKeyboardOpts,
       );
     });
   }
@@ -308,12 +327,12 @@ export class BotUpdate {
       const user = await this.userService.findByTelegramId(telegramId);
       const tickets = await this.ticketService.listUserTickets(user.id);
       if (tickets.length === 0) {
-        await ctx.reply('🔒 У вас нет билетов.');
+        await ctx.reply('🔒 У вас нет билетов.', this.defaultKeyboardOpts);
         return;
       }
       const ticketId = tickets[0].id;
       await this.ticketService.confirmTicket(ticketId, user.id);
-      await ctx.reply('🤝 Билет подтвержден!');
+      await ctx.reply('🤝 Билет подтвержден!', this.defaultKeyboardOpts);
     });
   }
 
@@ -331,7 +350,10 @@ export class BotUpdate {
         }
       }
       if (!session) {
-        await ctx.reply('🔒 Нет доступных сессий для просмотра билетов.');
+        await ctx.reply(
+          '🔒 Нет доступных сессий для просмотра билетов.',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       const tickets = await this.ticketService.listTicketsForSession(
@@ -343,6 +365,7 @@ export class BotUpdate {
       );
       await ctx.reply(
         `🎫 Билеты для сессии ${session.campaign.name}:\n${list.join('\n')}`,
+        this.defaultKeyboardOpts,
       );
     });
   }
@@ -354,7 +377,7 @@ export class BotUpdate {
       const user = await this.userService.findByTelegramId(telegramId);
       const tickets = await this.ticketService.listUserTickets(user.id);
       if (tickets.length === 0) {
-        await ctx.reply('🔒 У вас нет билетов.');
+        await ctx.reply('🔒 У вас нет билетов.', this.defaultKeyboardOpts);
         return;
       }
       const list = tickets
@@ -367,7 +390,7 @@ export class BotUpdate {
             })}, Статус: ${t.status}, Тип бронирования: ${t.drop}`,
         )
         .join('\n');
-      await ctx.reply(`🎫 Ваши билеты:\n${list}`);
+      await ctx.reply(`🎫 Ваши билеты:\n${list}`, this.defaultKeyboardOpts);
     });
   }
 
@@ -380,17 +403,26 @@ export class BotUpdate {
       const text = getMessageText(ctx);
       const args = text?.split(' ').slice(1);
       if (!args || args.length < 1) {
-        await ctx.reply('🔒 Пример: /permanent <campaignId>');
+        await ctx.reply(
+          '🔒 Пример: /permanent <campaignId>',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       const [campaignIdStr] = args;
       const campaignId = parseInt(campaignIdStr, 10);
       if (isNaN(campaignId)) {
-        await ctx.reply('🔒 campaignId должен быть числом.');
+        await ctx.reply(
+          '🔒 campaignId должен быть числом.',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       await this.ticketService.createPermanentTicket(user.id, campaignId);
-      await ctx.reply('🎫 Постоянный билет зарегистрирован!');
+      await ctx.reply(
+        '🎫 Постоянный билет зарегистрирован!',
+        this.defaultKeyboardOpts,
+      );
     });
   }
 
@@ -408,16 +440,22 @@ export class BotUpdate {
         }
       }
       if (!session) {
-        await ctx.reply('🔒 Нет доступных сессий для отмены.');
+        await ctx.reply(
+          '🔒 Нет доступных сессий для отмены.',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       const ticket = user.tickets.find((t) => t.sessionId === session.id);
       if (!ticket) {
-        await ctx.reply('🔒 У вас нет билета для этой сессии.');
+        await ctx.reply(
+          '🔒 У вас нет билета для этой сессии.',
+          this.defaultKeyboardOpts,
+        );
         return;
       }
       await this.ticketService.cancelTicket(ticket.id, user.id);
-      await ctx.reply('🤝 Билет отменен.');
+      await ctx.reply('🤝 Билет отменен.', this.defaultKeyboardOpts);
     });
   }
 
@@ -530,6 +568,7 @@ export class BotUpdate {
                 }`,
             )
             .join('\n'),
+        this.defaultKeyboardOpts,
       );
     });
   }

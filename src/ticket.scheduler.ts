@@ -66,14 +66,19 @@ export class TicketScheduler {
           if (user) {
             await this.bot.telegram.sendMessage(
               user.telegramId,
-              `🔥 Пожалуйста, подтвердите ваше бронирование для сессии ${session.id} (${session.campaign.name}) в течение часа, иначе ваш билет будет отменен.`,
+              `🔥 Пожалуйста, подтвердите ваше бронирование для сессии ${session.id} (${session.campaign.name}) в течение 3 часов, иначе ваш билет будет отменен.`,
+              {
+                reply_markup: {
+                  keyboard: [[{ text: '/confirm' }]],
+                },
+              },
             );
           }
         }
       }
 
-      // 24h before: non-priority drop and unbook unconfirmed tickets
-      if (hToSession > 23.9 && hToSession < 24.1) {
+      // 22h before: non-priority drop and unbook unconfirmed tickets
+      if (hToSession > 21.9 && hToSession < 22.1) {
         // Unbook unconfirmed tickets
         const tickets = await this.prisma.ticket.findMany({
           where: { sessionId: session.id, status: 'BOOKED' },
