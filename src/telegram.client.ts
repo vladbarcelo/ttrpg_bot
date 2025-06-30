@@ -64,10 +64,14 @@ export class BotUpdate {
       this.logger.log(logMsg);
       await fn(ctx);
     } catch (e) {
-      await ctx.reply(
-        '❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'),
-        this.defaultKeyboardOpts,
-      );
+      let msg = e.message || 'Неизвестная ошибка';
+      if (
+        e?.getStatus &&
+        typeof e.getStatus === 'function' &&
+        e?.getStatus() > 500
+      )
+        msg = '❌ Ошибка: ' + msg;
+      await ctx.reply(msg, this.defaultKeyboardOpts);
       this.logger.error(logMsg, e);
     }
   }
