@@ -390,4 +390,133 @@ export class BotUpdate {
       await ctx.reply('🤝 Билет отменен.');
     });
   }
+
+  @Command('prioritize')
+  async prioritizeUser(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const telegramId = String(ctx.from?.id);
+      const user = await this.userService.findByTelegramId(telegramId);
+      if (!user) {
+        await ctx.reply('🔒 Вы должны зарегистрироваться.');
+        return;
+      }
+      this.userService.checkRole(user, ['admin']);
+      const text = getMessageText(ctx);
+      const args = text?.split(' ').slice(1);
+      if (!args || args.length < 1) {
+        await ctx.reply('🔒 Пример: /prioritize <telegramId>');
+        return;
+      }
+      const [telegramIdStr] = args;
+      const targetUserId = parseInt(telegramIdStr, 10);
+      if (isNaN(targetUserId)) {
+        await ctx.reply('🔒 telegramId должен быть числом.');
+        return;
+      }
+      await this.userService.setUserPriority(String(targetUserId), true);
+      await ctx.reply('🤝 Пользователь приоритетизирован.');
+    });
+  }
+
+  @Command('deprioritize')
+  async deprioritizeUser(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const telegramId = String(ctx.from?.id);
+      const user = await this.userService.findByTelegramId(telegramId);
+      if (!user) {
+        await ctx.reply('🔒 Вы должны зарегистрироваться.');
+        return;
+      }
+      this.userService.checkRole(user, ['admin']);
+      const text = getMessageText(ctx);
+      const args = text?.split(' ').slice(1);
+      if (!args || args.length < 1) {
+        await ctx.reply('🔒 Пример: /deprioritize <telegramId>');
+        return;
+      }
+      const [telegramIdStr] = args;
+      const targetUserId = parseInt(telegramIdStr, 10);
+      if (isNaN(targetUserId)) {
+        await ctx.reply('🔒 telegramId должен быть числом.');
+        return;
+      }
+      await this.userService.setUserPriority(String(targetUserId), false);
+      await ctx.reply('🤝 Пользователь деприоритетизирован.');
+    });
+  }
+
+  @Command('dm')
+  async setUserAsDungeonMaster(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const telegramId = String(ctx.from?.id);
+      const user = await this.userService.findByTelegramId(telegramId);
+      if (!user) {
+        await ctx.reply('🔒 Вы должны зарегистрироваться.');
+        return;
+      }
+      this.userService.checkRole(user, ['admin']);
+      const text = getMessageText(ctx);
+      const args = text?.split(' ').slice(1);
+      if (!args || args.length < 1) {
+        await ctx.reply('🔒 Пример: /prioritize <telegramId>');
+        return;
+      }
+      const [telegramIdStr] = args;
+      const targetUserId = parseInt(telegramIdStr, 10);
+      if (isNaN(targetUserId)) {
+        await ctx.reply('🔒 telegramId должен быть числом.');
+        return;
+      }
+      await this.userService.setUserAsDungeonMaster(String(targetUserId), true);
+      await ctx.reply('🤝 Пользователь теперь ДМ.');
+    });
+  }
+
+  @Command('undm')
+  async undoDungeonMaster(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const telegramId = String(ctx.from?.id);
+      const user = await this.userService.findByTelegramId(telegramId);
+      if (!user) {
+        await ctx.reply('🔒 Вы должны зарегистрироваться.');
+        return;
+      }
+      this.userService.checkRole(user, ['admin']);
+      const text = getMessageText(ctx);
+      const args = text?.split(' ').slice(1);
+      if (!args || args.length < 1) {
+        await ctx.reply('🔒 Пример: /undm <telegramId>');
+        return;
+      }
+      const [telegramIdStr] = args;
+      const targetUserId = parseInt(telegramIdStr, 10);
+      if (isNaN(targetUserId)) {
+        await ctx.reply('🔒 telegramId должен быть числом.');
+        return;
+      }
+      await this.userService.setUserAsDungeonMaster(
+        String(targetUserId),
+        false,
+      );
+      await ctx.reply('🤝 Пользователь теперь не ДМ.');
+    });
+  }
+
+  @Command('users')
+  async listUsers(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const users = await this.userService.listUsers();
+      await ctx.reply(
+        '🤝 Пользователи:\n' +
+          users
+            .map(
+              (u) =>
+                `${u.name} (${u.telegramId}) ${u.isPriority ? '👑' : ''} ${
+                  u.isDungeonMaster ? '🎲' : ''
+                }`,
+            )
+            .join('\n'),
+      );
+    });
+  }
 }

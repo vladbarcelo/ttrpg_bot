@@ -67,4 +67,22 @@ export class UserService {
 
     throw new ForbiddenException('Недостаточно прав.');
   }
+
+  async setUserPriority(telegramId: string, isPriority: boolean) {
+    return this.prisma.user.update({
+      where: { telegramId },
+      data: { isPriority },
+    });
+  }
+
+  async setUserAsDungeonMaster(telegramId: string, isDungeonMaster: boolean) {
+    return this.prisma.user.update({
+      where: { telegramId },
+      data: { isDungeonMaster },
+    });
+  }
+
+  async listUsers() {
+    return this.prisma.user.findMany();
+  }
 }
