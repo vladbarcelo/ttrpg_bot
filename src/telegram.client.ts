@@ -3,7 +3,7 @@ import { Context, Telegraf } from 'telegraf';
 import { UserService } from './user.service';
 import { CampaignService } from './campaign.service';
 import { TicketService } from './ticket.service';
-import { DropType } from '@prisma/client';
+import { DropType, TicketStatus } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { Logger } from '@nestjs/common';
 
@@ -306,6 +306,17 @@ export class BotUpdate {
     });
   }
 
+  private readonly statusEmojis = {
+    [TicketStatus.CONFIRMED]: '✅',
+    [TicketStatus.BOOKED]: '⌛️',
+  };
+
+  private readonly ticketTypeEmojis = {
+    [DropType.NON_PRIORITY]: '',
+    [DropType.PRIORITY]: '👑',
+    [DropType.PERMANENT]: '🗿',
+  };
+
   @Command('tickets')
   async tickets(@Ctx() ctx: Context) {
     await this.handle(ctx, async (ctx) => {
@@ -317,7 +328,9 @@ export class BotUpdate {
       );
       const list = tickets.map(
         (t) =>
-          `ID: ${t.id}, Пользователь: ${t.user.name}, Статус: ${t.status}, Тип бронирования: ${t.drop}`,
+          `[${t.id}] ${t.user.name} ${this.statusEmojis[t.status]} ${
+            this.ticketTypeEmojis[t.drop]
+          }`,
       );
       await ctx.reply(
         `🎫 Билеты для сессии ${session.campaign.name}:\n${list.join('\n')}`,
@@ -339,11 +352,13 @@ export class BotUpdate {
       const list = tickets
         .map(
           (t) =>
-            `ID: ${t.id}, Кампания: ${
+            `[${t.id}] ${
               t.session.campaign.name
-            }, Дата: ${t.session.dateTime.toLocaleString('ru-RU', {
+            } (${t.session.dateTime.toLocaleString('ru-RU', {
               timeZone: 'Europe/Moscow',
-            })}, Статус: ${t.status}, Тип бронирования: ${t.drop}`,
+            })}) ${this.statusEmojis[t.status]} ${
+              this.ticketTypeEmojis[t.drop]
+            }`,
         )
         .join('\n');
       await ctx.reply(`🎫 Ваши билеты:\n${list}`, this.defaultKeyboardOpts);
