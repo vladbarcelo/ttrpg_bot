@@ -326,9 +326,9 @@ export class BotUpdate {
       );
       const list = tickets.map(
         (t) =>
-          `[${t.id}] ${t.user.name} ${this.statusEmojis[t.status]} ${
-            this.ticketTypeEmojis[t.drop]
-          }`,
+          `[${t.id}] ${t.user.name} ${this.ticketTypeEmojis[t.drop]} ${
+            this.statusEmojis[t.status]
+          } `,
       );
       await ctx.reply(
         `🎫 Билеты для сессии ${session.campaign.name}:\n${list.join('\n')}`,
@@ -354,8 +354,8 @@ export class BotUpdate {
               t.session.campaign.name
             } (${t.session.dateTime.toLocaleString('ru-RU', {
               timeZone: 'Europe/Moscow',
-            })}) ${this.statusEmojis[t.status]} ${
-              this.ticketTypeEmojis[t.drop]
+            })}) ${this.ticketTypeEmojis[t.drop]} ${
+              this.statusEmojis[t.status]
             }`,
         )
         .join('\n');
