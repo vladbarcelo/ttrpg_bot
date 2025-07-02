@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Session } from '@prisma/client';
 import { PrismaService } from './prisma.service';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class CampaignService {
@@ -74,5 +76,15 @@ export class CampaignService {
       throw new NotFoundException('🔒 Запланированных сессий не найдено');
     }
     return session;
+  }
+
+  getHoursToSession(session: Session) {
+    const now = DateTime.now().setZone('Europe/Moscow');
+    const sessionTime = DateTime.fromJSDate(session.dateTime).setZone(
+      'Europe/Moscow',
+    );
+    const hoursToSession = sessionTime.diff(now, 'hours').hours;
+
+    return hoursToSession;
   }
 }

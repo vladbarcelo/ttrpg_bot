@@ -6,10 +6,14 @@ import {
 import { DropType, TicketStatus } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 import { DateTime } from 'luxon';
+import { CampaignService } from './campaign.service';
 
 @Injectable()
 export class TicketService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly campaignService: CampaignService,
+  ) {}
 
   async bookTicket(sessionId: number, userId: number, drop: DropType) {
     // Check if session exists
@@ -28,14 +32,14 @@ export class TicketService {
         '🔒 Вам не нужно бронировать билеты для сессии, которую вы ведёте',
       );
     // check if drop is valid
-    const now = DateTime.now().setZone('Europe/Moscow');
-    const sessionTime = DateTime.fromJSDate(session.dateTime).setZone(
-      'Europe/Moscow',
-    );
-    const hoursToSession = sessionTime.diff(now, 'hours').hours;
-    if (hoursToSession > 22.1 && drop === DropType.NON_PRIORITY) {
+    const hoursToSession = this.campaignService.getHoursToSession(session);
+
+    if (hoursToSession > 22.1 && drop === DropType.NON_PRIORITY)
       throw new ForbiddenException('⌛ Слишком рано для бронирования');
-    }
+
+    if (hoursToSession <= 2)
+      throw new ForbiddenException('⏰ Слишком поздно для бронирования');
+
     // Check if max tickets reached
     const count = await this.prisma.ticket.count({
       where: {
@@ -83,10 +87,10 @@ export class TicketService {
     if (ticket.status === TicketStatus.CONFIRMED)
       throw new ForbiddenException('🔒 Билет уже подтвержден');
 
-    if (ticket.drop === DropType.PRIORITY && hoursToSession > 25)
+    if (ticket.drop === DropType.PRIORITY && hoursToSession > 25.1)
       throw new ForbiddenException('⌛ Слишком рано для подтверждения');
 
-    if (hoursToSession < 24)
+    if (hoursToSession < 22.1)
       throw new ForbiddenException('⏰ Слишком поздно для подтверждения');
 
     return this.prisma.ticket.update({
