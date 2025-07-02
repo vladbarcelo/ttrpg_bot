@@ -17,12 +17,12 @@ export class TicketService {
       where: { id: sessionId },
       include: { campaign: true, tickets: true },
     });
-    if (!session) throw new NotFoundException('Сессия не найдена');
+    if (!session) throw new NotFoundException('🔒 Сессия не найдена');
     // Check if user already has a ticket for this session
     const existing = await this.prisma.ticket.findFirst({
       where: { sessionId, userId },
     });
-    if (existing) throw new ForbiddenException('Билет уже забронирован');
+    if (existing) throw new ForbiddenException('🔒 Билет уже забронирован');
     if (session.campaign.dungeonMasterId === userId)
       throw new ForbiddenException(
         '🔒 Вам не нужно бронировать билеты для сессии, которую вы ведёте',
@@ -34,7 +34,7 @@ export class TicketService {
     );
     const hoursToSession = sessionTime.diff(now, 'hours').hours;
     if (hoursToSession > 22.1 && drop === DropType.NON_PRIORITY) {
-      throw new ForbiddenException('Слишком рано для бронирования');
+      throw new ForbiddenException('⌛ Слишком рано для бронирования');
     }
     // Check if max tickets reached
     const count = await this.prisma.ticket.count({
@@ -43,7 +43,7 @@ export class TicketService {
       },
     });
     if (count >= session.campaign.maxTickets)
-      throw new ForbiddenException('Билеты закончились');
+      throw new ForbiddenException('🔒 Билеты закончились');
 
     let status: TicketStatus = TicketStatus.BOOKED;
     if (drop === DropType.PERMANENT) status = TicketStatus.CONFIRMED;
@@ -66,7 +66,7 @@ export class TicketService {
       include: { session: true },
     });
     if (!ticket || ticket.userId !== userId)
-      throw new NotFoundException('Билет не найден');
+      throw new NotFoundException('🔒 Билет не найден');
 
     const now = DateTime.now().setZone('Europe/Moscow');
     const sessionTime = DateTime.fromJSDate(ticket.session.dateTime).setZone(

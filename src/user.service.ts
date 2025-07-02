@@ -69,7 +69,7 @@ export class UserService {
       if (role === 'priority' && user.isPriority) return;
     }
 
-    throw new ForbiddenException('Недостаточно прав.');
+    throw new ForbiddenException('🔒 Недостаточно прав.');
   }
 
   async setUserPriority(telegramId: string, isPriority: boolean) {
