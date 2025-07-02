@@ -33,7 +33,10 @@ export class TicketScheduler {
         },
       });
       for (const user of priorityUsers) {
-        if (user.tickets.some((t) => t.sessionId === session.id)) {
+        if (
+          user.tickets.some((t) => t.sessionId === session.id) ||
+          session.campaign.dungeonMasterId === user.id
+        ) {
           continue;
         }
 

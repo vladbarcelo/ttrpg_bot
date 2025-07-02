@@ -59,7 +59,9 @@ export class CampaignService {
   }
 
   async getNextSession() {
-    let session = null;
+    let session: Awaited<
+      ReturnType<CampaignService['getNextSessionForCampaign']>
+    > = null;
     const allCampaigns = await this.listCampaigns();
     for (const c of allCampaigns) {
       const s = await this.getNextSessionForCampaign(c.id);
