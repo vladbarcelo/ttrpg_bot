@@ -115,8 +115,19 @@ export class TicketScheduler {
         }
       }
       // Notify all users about non-priority drop
-      const users = await this.prisma.user.findMany();
+      const users = await this.prisma.user.findMany({
+        include: {
+          tickets: true,
+        },
+      });
       for (const user of users) {
+        if (
+          user.tickets.some((t) => t.sessionId === session.id) ||
+          session.campaign.dungeonMasterId === user.id
+        ) {
+          continue;
+        }
+
         await this.bot.telegram.sendMessage(
           user.telegramId,
           `⚡ Открыто бронирование для сессии ${session.id} (${session.campaign.name})`,
