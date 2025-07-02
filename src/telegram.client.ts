@@ -279,12 +279,16 @@ export class BotUpdate {
       const sessionTime = DateTime.fromJSDate(session.dateTime).setZone(
         'Europe/Moscow',
       );
-      await ctx.reply(
-        `🎫 Билет забронирован для сессии ${
-          session.campaign.name
-        } (${sessionTime.toFormat('yyyy-MM-dd HH:mm')})`,
-        this.defaultKeyboardOpts,
-      );
+
+      let msg = `🎫 Билет забронирован для сессии ${
+        session.campaign.name
+      } (${sessionTime.toFormat('yyyy-MM-dd HH:mm')})`;
+
+      const hoursToSession = this.campaignService.getHoursToSession(session);
+      if (hoursToSession > 21.9 && hoursToSession < 25.1)
+        msg += `. 🔥 Не забудьте подтвердить ваше бронирование до 21.00!`;
+
+      await ctx.reply(msg, this.defaultKeyboardOpts);
     });
   }
 
