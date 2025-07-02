@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from './prisma.service';
-import { UserService } from './user.service';
-import { TicketService } from './ticket.service';
 import { Telegraf } from 'telegraf';
 import { InjectBot } from 'nestjs-telegraf';
 import { TicketStatus } from '@prisma/client';
