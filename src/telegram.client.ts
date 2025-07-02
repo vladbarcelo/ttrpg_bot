@@ -251,7 +251,7 @@ export class BotUpdate {
       await ctx.reply(
         `🎲 Следующая сессия: ${
           session.campaign.name
-        } в ${session.dateTime.toLocaleString('ru-RU', {
+        }, ${session.dateTime.toLocaleString('ru-RU', {
           timeZone: 'Europe/Moscow',
         })} (доступно билетов: ${availableTickets})`,
         this.defaultKeyboardOpts,
