@@ -42,10 +42,8 @@ export class BotUpdate {
   private readonly defaultKeyboardOpts = {
     reply_markup: {
       keyboard: [
+        [{ text: '/book' }, { text: '/confirm' }, { text: '/cancel' }],
         [
-          { text: '/book' },
-          { text: '/confirm' },
-          { text: '/cancel' },
           { text: '/my_tickets' },
           { text: '/tickets' },
           { text: '/next_session' },
