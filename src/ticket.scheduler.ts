@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from './prisma.service';
 import { UserService } from './user.service';
@@ -16,13 +16,20 @@ export class TicketScheduler {
     @InjectBot() private readonly bot: Telegraf<any>,
   ) {}
 
+  private readonly logger = new Logger('TicketScheduler', { timestamp: true });
+
   @Cron(CronExpression.EVERY_5_MINUTES)
   async handleTicketDropsAndConfirmations() {
-    const now = new Date();
     const session = await this.campaignService.getNextSession();
 
-    const msToSession = session.dateTime.getTime() - now.getTime();
-    const hToSession = msToSession / (60 * 60 * 1000);
+    if (!session) return;
+
+    const hToSession = this.campaignService.getHoursToSession(session);
+
+    this.logger.debug({
+      session,
+      hToSession,
+    });
 
     // priority drop
     if (!session.priorityDropNotified) {
@@ -39,6 +46,10 @@ export class TicketScheduler {
         ) {
           continue;
         }
+
+        this.logger.log(
+          `Sending priority drop notification to ${user.name} for session ${session.campaign.name}`,
+        );
 
         await this.bot.telegram.sendMessage(
           user.telegramId,
@@ -73,6 +84,9 @@ export class TicketScheduler {
           where: { id: ticket.userId },
         });
         if (user) {
+          this.logger.log(
+            `Sending confirmation request to ${user.name} for session ${session.campaign.name}`,
+          );
           await this.bot.telegram.sendMessage(
             user.telegramId,
             `🔥 Пожалуйста, подтвердите ваше бронирование для сессии ${session.id} (${session.campaign.name}) в течение 3 часов, иначе ваш билет будет отменен.`,
@@ -98,7 +112,7 @@ export class TicketScheduler {
     ) {
       // Unbook unconfirmed tickets
       const tickets = await this.prisma.ticket.findMany({
-        where: { sessionId: session.id, status: 'BOOKED' },
+        where: { sessionId: session.id, status: TicketStatus.BOOKED },
       });
       for (const ticket of tickets) {
         await this.prisma.ticket.delete({
@@ -108,13 +122,16 @@ export class TicketScheduler {
           where: { id: ticket.userId },
         });
         if (user) {
+          this.logger.log(
+            `Unbooking unconfirmed ticket for ${user.name} for session ${session.campaign.name}`,
+          );
           await this.bot.telegram.sendMessage(
             user.telegramId,
             `‼️ Ваш билет для сессии ${session.id} (${session.campaign.name}) был отменен из-за не подтверждения бронирования.`,
           );
         }
       }
-      // Notify all users about non-priority drop
+      // Notify users about non-priority drop
       const users = await this.prisma.user.findMany({
         include: {
           tickets: true,
@@ -127,6 +144,10 @@ export class TicketScheduler {
         ) {
           continue;
         }
+
+        this.logger.log(
+          `Sending non-priority drop notification to ${user.name} for session ${session.campaign.name}`,
+        );
 
         await this.bot.telegram.sendMessage(
           user.telegramId,

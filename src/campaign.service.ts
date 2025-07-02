@@ -83,8 +83,10 @@ export class CampaignService {
     const sessionTime = DateTime.fromJSDate(session.dateTime).setZone(
       'Europe/Moscow',
     );
-    const hoursToSession = sessionTime.diff(now, 'hours').hours;
+    const msToSession =
+      sessionTime.toJSDate().getTime() - now.toJSDate().getTime();
+    const hToSession = msToSession / (60 * 60 * 1000);
 
-    return hoursToSession;
+    return hToSession;
   }
 }
