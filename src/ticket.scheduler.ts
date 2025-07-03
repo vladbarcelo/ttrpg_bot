@@ -24,11 +24,6 @@ export class TicketScheduler {
 
     const hToSession = this.campaignService.getHoursToSession(session);
 
-    this.logger.debug({
-      session,
-      hToSession,
-    });
-
     // priority drop
     if (!session.priorityDropNotified) {
       const priorityUsers = await this.prisma.user.findMany({
