@@ -123,9 +123,19 @@ export class TicketService {
     const existing = await this.prisma.permanentTicket.findFirst({
       where: { userId },
     });
+
     if (existing)
       throw new ForbiddenException('🔒 У вас уже есть постоянный билет');
-    return this.prisma.permanentTicket.create({ data: { userId, campaignId } });
+
+    await this.prisma.permanentTicket.create({ data: { userId, campaignId } });
+
+    const session = await this.campaignService.getNextSessionForCampaign(
+      campaignId,
+    );
+
+    if (!session) return;
+
+    await this.bookTicket(session.id, userId, DropType.PERMANENT);
   }
 
   async listPermanentTickets(userId: number) {
