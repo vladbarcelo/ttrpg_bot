@@ -30,12 +30,14 @@ export class TicketScheduler {
         where: { isPriority: true },
         include: {
           tickets: true,
+          permanentTickets: true,
         },
       });
       for (const user of priorityUsers) {
         if (
           user.tickets.some((t) => t.sessionId === session.id) ||
-          session.campaign.dungeonMasterId === user.id
+          session.campaign.dungeonMasterId === user.id ||
+          user.permanentTickets.length > 0
         ) {
           continue;
         }
