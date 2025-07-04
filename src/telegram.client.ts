@@ -176,8 +176,15 @@ export class BotUpdate {
       const telegramId = String(ctx.from?.id);
       const user = await this.userService.findByTelegramId(telegramId);
       this.userService.checkRole(user, ['admin', 'dungeonMaster']);
-      // Stub: get assigned campaign for DM
-      const campaignId = await this.getAssignedCampaignIdForDM(user.id);
+
+      let campaignId = await this.getAssignedCampaignIdForDM(user.id);
+      if (!campaignId) {
+        const text = getMessageText(ctx);
+        const args = text?.split(' ').slice(1);
+        campaignId = parseInt(args?.[0] || '', 10);
+        if (isNaN(campaignId)) campaignId = null;
+      }
+
       if (!campaignId) {
         await ctx.reply('🔒 Кампания не назначена.', this.defaultKeyboardOpts);
         return;
@@ -330,7 +337,7 @@ export class BotUpdate {
       );
       const list = tickets.map(
         (t) =>
-          `[${t.id}] ${t.user.name} ${this.ticketTypeEmojis[t.drop]} ${
+          `- ${t.user.name} ${this.ticketTypeEmojis[t.drop]} ${
             this.statusEmojis[t.status]
           } `,
       );
@@ -354,11 +361,12 @@ export class BotUpdate {
       const list = tickets
         .map(
           (t) =>
-            `[${t.id}] ${
-              t.session.campaign.name
-            } (${t.session.dateTime.toLocaleString('ru-RU', {
-              timeZone: 'Europe/Moscow',
-            })}) ${this.ticketTypeEmojis[t.drop]} ${
+            `- ${t.session.campaign.name} (${t.session.dateTime.toLocaleString(
+              'ru-RU',
+              {
+                timeZone: 'Europe/Moscow',
+              },
+            )}) ${this.ticketTypeEmojis[t.drop]} ${
               this.statusEmojis[t.status]
             }`,
         )
@@ -524,7 +532,7 @@ export class BotUpdate {
           users
             .map(
               (u) =>
-                `${u.name} (${u.telegramId}) ${u.isPriority ? '👑' : ''} ${
+                `- ${u.name} (${u.telegramId}) ${u.isPriority ? '👑' : ''} ${
                   u.isDungeonMaster ? '🎲' : ''
                 }`,
             )
