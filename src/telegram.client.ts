@@ -238,6 +238,50 @@ export class BotUpdate {
     });
   }
 
+  @Command('cancel_session')
+  async cancelSession(@Ctx() ctx: Context) {
+    await this.handle(ctx, async (ctx) => {
+      const telegramId = String(ctx.from?.id);
+      const user = await this.userService.findByTelegramId(telegramId);
+      this.userService.checkRole(user, ['admin', 'dungeonMaster']);
+
+      let campaignId = await this.getAssignedCampaignIdForDM(user.id);
+      if (!campaignId) {
+        const text = getMessageText(ctx);
+        const args = text?.split(' ').slice(1);
+        campaignId = parseInt(args?.[0] || '', 10);
+        if (isNaN(campaignId)) campaignId = null;
+      }
+
+      if (!campaignId) {
+        await ctx.reply('🔒 Кампания не назначена.', this.defaultKeyboardOpts);
+        return;
+      }
+
+      const session = await this.campaignService.getNextSessionForCampaign(
+        campaignId,
+      );
+      if (!session) {
+        await ctx.reply('🔒 Сессия не найдена.', this.defaultKeyboardOpts);
+        return;
+      }
+
+      for (const ticket of session.tickets) {
+        await this.bot.telegram.sendMessage(
+          ticket.user.telegramId,
+          `🎲 Сессия ${
+            session.campaign.name
+          } (${session.dateTime.toLocaleString('ru-RU', {
+            timeZone: 'Europe/Moscow',
+          })}) была отменена, ваш билет был аннулирован.`,
+        );
+      }
+
+      await this.campaignService.cancelSession(session.id);
+      await ctx.reply('🎲 Сессия отменена.', this.defaultKeyboardOpts);
+    });
+  }
+
   // Stub for DM campaign assignment
   private async getAssignedCampaignIdForDM(
     userId: number,

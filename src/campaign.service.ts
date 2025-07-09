@@ -40,6 +40,15 @@ export class CampaignService {
     });
   }
 
+  async cancelSession(sessionId: number) {
+    await this.prisma.ticket.deleteMany({
+      where: { sessionId },
+    });
+    return this.prisma.session.delete({
+      where: { id: sessionId },
+    });
+  }
+
   async listSessionsForCampaign(campaignId: number) {
     return this.prisma.session.findMany({
       where: { campaignId },
@@ -55,6 +64,11 @@ export class CampaignService {
       },
       include: {
         campaign: true,
+        tickets: {
+          include: {
+            user: true,
+          },
+        },
       },
       orderBy: { dateTime: 'asc' },
     });
