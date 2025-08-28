@@ -5,13 +5,14 @@ import { Telegraf } from 'telegraf';
 import { InjectBot } from 'nestjs-telegraf';
 import { TicketStatus } from '@prisma/client';
 import { CampaignService } from './campaign.service';
+import { BotUpdate } from './telegram.client';
 
 @Injectable()
 export class TicketScheduler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly campaignService: CampaignService,
-    @InjectBot() private readonly bot: Telegraf<any>,
+    private readonly bot: BotUpdate,
   ) {}
 
   private readonly logger = new Logger('TicketScheduler', { timestamp: true });
@@ -46,7 +47,7 @@ export class TicketScheduler {
           `Sending priority drop notification to ${user.name} for session ${session.campaign.name}`,
         );
 
-        await this.bot.telegram.sendMessage(
+        await this.bot.sendMessage(
           user.telegramId,
           `👑 Открыто приоритетное бронирование для сессии ${session.id} (${session.campaign.name})`,
           {
@@ -82,7 +83,7 @@ export class TicketScheduler {
           this.logger.log(
             `Sending confirmation request to ${user.name} for session ${session.campaign.name}`,
           );
-          await this.bot.telegram.sendMessage(
+          await this.bot.sendMessage(
             user.telegramId,
             `🔥 Пожалуйста, подтвердите ваше бронирование для сессии ${session.id} (${session.campaign.name}) в течение 3 часов, иначе ваш билет будет отменен.`,
             {
@@ -120,7 +121,7 @@ export class TicketScheduler {
           this.logger.log(
             `Unbooking unconfirmed ticket for ${user.name} for session ${session.campaign.name}`,
           );
-          await this.bot.telegram.sendMessage(
+          await this.bot.sendMessage(
             user.telegramId,
             `‼️ Ваш билет для сессии ${session.id} (${session.campaign.name}) был отменен из-за не подтверждения бронирования.`,
           );
@@ -144,7 +145,7 @@ export class TicketScheduler {
           `Sending non-priority drop notification to ${user.name} for session ${session.campaign.name}`,
         );
 
-        await this.bot.telegram.sendMessage(
+        await this.bot.sendMessage(
           user.telegramId,
           `⚡ Открыто бронирование для сессии ${session.id} (${session.campaign.name})`,
           {

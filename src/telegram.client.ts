@@ -5,7 +5,9 @@ import { CampaignService } from './campaign.service';
 import { TicketService } from './ticket.service';
 import { DropType, TicketStatus } from '@prisma/client';
 import { DateTime } from 'luxon';
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { FmtString } from 'telegraf/typings/format';
+import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 
 function getMessageText(ctx: Context): string | undefined {
   const msg = ctx.message as { text?: string } | undefined;
@@ -13,6 +15,7 @@ function getMessageText(ctx: Context): string | undefined {
 }
 
 @Update()
+@Injectable()
 export class BotUpdate {
   constructor(
     private readonly userService: UserService,
@@ -221,7 +224,7 @@ export class BotUpdate {
           perm.userId,
           DropType.PERMANENT,
         );
-        await this.bot.telegram.sendMessage(
+        await this.sendMessage(
           perm.userId,
           `🎫 Ваш постоянный билет зарегистрирован на сессию ${
             campaign.name
@@ -267,7 +270,7 @@ export class BotUpdate {
       }
 
       for (const ticket of session.tickets) {
-        await this.bot.telegram.sendMessage(
+        await this.sendMessage(
           ticket.user.telegramId,
           `🎲 Сессия ${
             session.campaign.name
@@ -588,5 +591,17 @@ export class BotUpdate {
         this.defaultKeyboardOpts,
       );
     });
+  }
+
+  async sendMessage(
+    chatId: number | string,
+    text: string | FmtString,
+    extra?: ExtraReplyMessage,
+  ) {
+    try {
+      await this.bot.telegram.sendMessage(chatId, text, extra);
+    } catch (err) {
+      this.logger.warn(err, `Unable to send message to ${chatId}`);
+    }
   }
 }
